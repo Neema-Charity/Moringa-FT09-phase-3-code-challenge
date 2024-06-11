@@ -21,7 +21,12 @@ class Author:
     @property
     def name(self):
         """Return the name of the author."""
-        return self._name
+        sql = """
+        SELECT name
+        FROM authors
+        WHERE id =?
+        """
+        return self.name
 
     @name.setter
     def name(self, new_name):

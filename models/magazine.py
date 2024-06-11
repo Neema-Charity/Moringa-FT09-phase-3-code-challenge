@@ -15,9 +15,9 @@ class Magazine:
         self.id = self.CURSOR.lastrowid
 
     @property
-    def id(self):
-        """Return the id of the magazine."""
-        return self.id
+    def name(self):
+        """Return the name of the magazine."""
+        return self.name
 
     @property
     def name(self):
@@ -45,7 +45,7 @@ class Magazine:
 
         if isinstance(new_name, str):
             if 2<=len(new_name)<=16:
-                self._name = new_name
+                self.name = new_name
             else:
                 raise ValueError('Name must be between 2 and 16 characters')
         else:
@@ -57,7 +57,7 @@ class Magazine:
 
         if isinstance(new_category, str):
             if len(new_category)>0:
-                self._category = new_category
+                self.category = new_category
             else:
                 raise ValueError('Category must be longer than 0 characters')
         else:
