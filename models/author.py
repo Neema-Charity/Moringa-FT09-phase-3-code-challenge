@@ -1,46 +1,73 @@
-# from __init__ import CURSOR, CONN
+
+
+from models.conn import conn,cursor
 
 class Author:
-    def __init__(self, id: int, name: str):
+    def __init__(self, name, id=None):
         self._id = id
         self._name = name
-        """Insert a new row to the Author's table."""
-        sql = """
-        INSERT INTO authors (name)
-        VALUES (?)
-        """
-        self.CURSOR.execute(sql, (self._name,))
-        self.CONN.commit()
-        self._id = self.cursor.lastrowid 
 
     @property
     def id(self):
-        """Return the id of the author."""
         return self._id
+
+    @id.setter
+    def id(self, value):
+        if not isinstance(value, int):
+            raise TypeError("Author ID must be an integer")
+        self._id = value
 
     @property
     def name(self):
-        """Return the name of the author."""
-        sql = """
-        SELECT name
-        FROM authors
-        WHERE id =?
-        """
-        return self.name
-
+        return self._name
     @name.setter
-    def name(self, new_name):
-        """Set the name of the author."""
-        if hasattr(self, '_name'):
-            raise AttributeError('Name cannot be changed')
+    def name(self, value):
+        if not isinstance(name, str):
+            raise TypeError("Name must be a string")
+        if len(name) == 0:
+            raise ValueError("Author name must be longer than 0 characters ")
+
+    def save(self):
+        sql = """
+        INSERT INTO authors (name) VALUES (?)
+        """
+        cursor.execute(sql, (self.name,))
+        conn.commit()
+        self.id = cursor.lastrowid
+
+    @classmethod
+    def create(cls, name):
+        sql = "SELECT id FROM authors WHERE name = ?"
+        cursor.execute(sql, (name,))
+        result = cursor.fetchone()
+        if result:
+            author_id = result[0]
+            return cls(name, id=author_id)
         else:
-            if isinstance(new_name, str):
-                if len(new_name) > 0:
-                    self._name = new_name
-                else:
-                    raise ValueError('Name must be longer than 0 characters')
-            else:
-                raise ValueError('Name must be of type str')
+            author = cls(name)
+            author.save()
+            return author
+
+    def articles(self):
+        sql = """
+         SELECT articles.title
+         FROM articles
+         WHERE articles.author_id = ?
+        """
+        cursor.execute(sql, (self.id,))
+        article_titles = [row[0] for row in cursor.fetchall()]
+        return article_titles
+
+    def magazines(self):
+        sql = """
+        SELECT DISTINCT magazines.name
+        FROM articles
+        INNER JOIN magazines ON articles.magazine_id = magazines.id
+        WHERE articles.author_id = ?
+        """
+        cursor.execute(sql, (self.id,))
+        magazine_names = [row[0] for row in cursor.fetchall()]
+        return magazine_names
 
     def __repr__(self):
         return f'<Author {self.name}>'

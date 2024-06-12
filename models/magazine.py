@@ -1,67 +1,152 @@
-# from __init__ import CURSOR, CONN
+from models.conn import conn, cursor
 
 class Magazine:
-    def __init__(self, id: int, name: str, category):
-        self.id = id
-        self.name = name
-        self.category = category
-        """Insert a new row into the Magazines table"""
+    def __init__(self, name, category= None, id = None):
+        # if not isinstance(name,str):
+        #     raise TypeError("Name must be a string")
+        # if not 2 <= len(name) <= 16:
+        #     raise ValueError("Names must be between 2 and 16 characters, inclusive")
+        # if not isinstance(category,str):
+        #     raise TypeError("Category must be a string")
+        # if len(category) == 0:
+        #     raise ValueError("Name cannot be empty")
+
+        self._id = id
+        self._name = name
+        self._category = category
+
+
+    @classmethod
+    def create_table(cls):
         sql = """
-        INSERT INTO magazines (name, category)
-        VALUES (?,?)
+        CREATE TABLE IF NOT EXISTS magazines (
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        category TEXT,
+        CONSTRAINT unique_name_category UNIQUE (name, category)
+        );
         """
-        self.CURSOR.execute(sql, (self.name, self.category))
-        self.CONN.commit()
-        self.id = self.CURSOR.lastrowid
+        cursor.execute(sql)
+        conn.commit()
+
+    @classmethod
+    def drop_table(cls):
+        cursor.execute("DROP TABLE IF EXISTS magazines")
+        conn.commit()
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        if not isinstance(value,int):
+            raise ValueError("ID must be an integer value")
+        self._id = value
 
     @property
     def name(self):
-        """Return the name of the magazine."""
-        return self.name
+        if self._id is not None:
+            sql = "SELECT name FROM magazines WHERE id = ?"
+            cursor.execute(sql, (self.id,))
+            result = cursor.fetchone()
+            if result:
+                 return result[0]
+        return self._name
 
-    @property
-    def name(self):
-        """Return the name of the magazine."""
-        sql = """
-        SELECT name
-        FROM magazines
-        WHERE id =?
-        """
-        return self.name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value,str):
+            raise TypeError("Name must be a string")
+        if not 2 <= len(value) <= 16:
+            raise ValueError("Names must be between 2 and 16 characters, inclusive")
+        self._name = value
 
     @property
     def category(self):
-        """Return the category of the magazine."""
-        sql = """
-        SELECT category
-        FROM magazines
-        WHERE id =?
-        """
-        return self.category
-
-    @name.setter
-    def name(self, new_name):
-        """Set the name of the author."""
-
-        if isinstance(new_name, str):
-            if 2<=len(new_name)<=16:
-                self.name = new_name
-            else:
-                raise ValueError('Name must be between 2 and 16 characters')
-        else:
-            raise ValueError('Name must be of type str')
+        if self._id is not None:
+            sql = "SELECT category FROM magazines WHERE id = ?"
+            cursor.execute(sql, (self.id,))
+            result = cursor.fetchone()
+            if result:
+                return result[0]
+        return self._category
 
     @category.setter
-    def category(self, new_category):
-        """Set the category of the magazine."""
+    def category(self, value):
+        if not isinstance(value,str):
+            raise TypeError("Category must be a string")
+        if len(value) == 0:
+            raise ValueError("Category cannot be empty")
+        self._category = value
 
-        if isinstance(new_category, str):
-            if len(new_category)>0:
-                self.category = new_category
-            else:
-                raise ValueError('Category must be longer than 0 characters')
-        else:
-            raise ValueError('Category must be of type str')
+    def save(self):
+        sql = "INSERT INTO magazines(name,category)VALUES(?,?)"
+        cursor.execute(sql, (self.name, self.category))
+        conn.commit()
+        self.id = cursor.lastrowid
+
+    @classmethod
+    def create(cls, name, category):
+        sql = "SELECT id FROM magazines WHERE name = ? AND category = ?"
+        cursor.execute(sql, (name, category))
+        existing_magazine = cursor.fetchone()
+        if existing_magazine:
+            raise ValueError("A magazine with the same name and category already exists")
+    
+        magazine = cls(name, category)
+        magazine.save()
+        return magazine
+
+        
+    def articles(self):
+        sql = "SELECT title FROM articles WHERE magazine_id = ?"
+        cursor.execute(sql, (self.id,))
+        result = cursor.fetchall()
+        article_titles = [row[0] for row in result]
+        return article_titles
+
+    def contributors(self):
+        sql = """
+        SELECT DISTINCT authors.name
+        FROM articles
+        INNER JOIN authors ON articles.author_id = authors.id
+        WHERE articles.magazine_id = ?
+        """
+        cursor.execute(sql, (self.id,))
+        contributor_names = [row[0] for row in cursor.fetchall()]
+        return contributor_names
+
+    def article_titles(self):
+        sql = "SELECT title FROM articles WHERE magazine_id = ?"
+        cursor.execute(sql, (self.id,))
+        article_titles = [row[0] for row in cursor.fetchall()]
+        return article_titles
+
+    def contributing_authors(self):
+        sql = """
+            SELECT authors.id, authors.name
+            FROM articles
+            INNER JOIN authors ON articles.author_id = authors.id
+            WHERE articles.magazine_id = ?
+            GROUP BY authors.id
+            HAVING COUNT(*) > 2
+            """
+        cursor.execute(sql, (self.id,))
+        authors_data = cursor.fetchall()
+
+        # Check if there are any authors with more than 2 publications
+        if not authors_data:
+            return None
+
+        # Convert data to Author objects
+        contributing_authors = []
+        for author_id, author_name in authors_data:
+            author = Author(name=author_name, id=author_id)
+            contributing_authors.append(author)
+
+        return contributing_authors
 
     def __repr__(self):
         return f'<Magazine {self.name}>'

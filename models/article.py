@@ -1,37 +1,79 @@
-# from author import Author 
-# from magazine import Magazine
+
+from models.conn import conn, cursor
 
 class Article:
-    def __init__(self, id, title: str, content, author_id, magazine_id):
+    def __init__(self, title, content, author_id, magazine_id,id = None):
         self.id = id
-        self.title = title
+        self._title = title
         self.content = content
         self.author_id = author_id
         self.magazine_id = magazine_id
 
+    @classmethod
+    def create_table(cls):
+        cursor.execute("CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, content TEXT, author_id INTEGER, magazine_id INTEGER, FOREIGN KEY (author_id) REFERENCES authors(id), FOREIGN KEY (magazine_id) REFERENCES magazines(id))")
+        conn.commit()
+
+    @classmethod
+    def drop_table(cls):
+        cursor.execute("DROP TABLE IF EXISTS articles")
+        conn.commit()
+        
     @property
     def title(self):
-        """Return the title of the article."""
-        sql = """
-            SELECT title
-            FROM articles
-            WHERE id =?
-        """
-        return self.title
+        return self._title
 
     @title.setter
-    def title(self, new_title):
-        """Set the title of the article."""
-        if hasattr(self, 'title'):
-            raise AttributeError('Title cannot be changed')
-        else:
-            if isinstance(new_title, str):
-                if 5<=len(new_title)<= 50:
-                    self.title = new_title
-                else:
-                    raise ValueError('Name must be longer than 0 characters')
-            else:
-                raise ValueError('Name must be of type str')
+    def title(self, value):
+        if not isinstance(value, str):
+            raise TypeError("Title must be a string")
+        if not 5<= len(value)<=50:
+            raise ValueError("Title must be between 5 and 50 characters")
+
+        self._title = value
+
+    def save(self):
+        sql = "INSERT INTO articles(title,content,author_id,magazine_id)VALUES(?,?,?,?)"
+        cursor.execute(sql, (self.title, self.content, self.author_id, self.magazine_id))
+        conn.commit()
+        self.id = cursor.lastrowid
+
+    @classmethod
+    def create(cls, title, content, author_id, magazine_id):
+    # Check if author_id exists
+        cursor.execute("SELECT COUNT(*) FROM authors WHERE id = ?", (author_id,))
+        author_exists = cursor.fetchone()[0] > 0
+
+    # Check if magazine_id exists
+        cursor.execute("SELECT COUNT(*) FROM magazines WHERE id = ?", (magazine_id,))
+        magazine_exists = cursor.fetchone()[0] > 0
+
+        if not author_exists:
+            raise ValueError("Author with id {} does not exist".format(author_id))
+
+        if not magazine_exists:
+            raise ValueError("Magazine with id {} does not exist".format(magazine_id))
+
+        article = cls(title, content, author_id, magazine_id)
+        article.save()
+        return article
+
+    def author(self):
+        sql = "SELECT authors.name FROM articles INNER JOIN authors ON articles.author_id = authors.id WHERE articles.id = ?"
+        cursor.execute(sql, (self.id,))
+        return cursor.fetchone()[0]
+
+
+    def magazine(self):
+        sql = "SELECT magazines.name FROM articles INNER JOIN magazines ON articles.magazine_id = magazines.id WHERE articles.id = ?"
+        cursor.execute(sql, (self.id,))
+        return cursor.fetchone()[0]
+
 
     def __repr__(self):
         return f'<Article {self.title}>'
+
+    # def test_article_creation(self):
+    #     article = Article("Test Title", "Test Content", 1, 1, id=1)
+    #     print('Article title:', article.title)
+    #     self.assertEqual(article.title, "Test Title")
