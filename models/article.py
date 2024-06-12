@@ -72,8 +72,3 @@ class Article:
 
     def __repr__(self):
         return f'<Article {self.title}>'
-
-    # def test_article_creation(self):
-    #     article = Article("Test Title", "Test Content", 1, 1, id=1)
-    #     print('Article title:', article.title)
-    #     self.assertEqual(article.title, "Test Title")

@@ -2,15 +2,6 @@ from models.conn import conn, cursor
 
 class Magazine:
     def __init__(self, name, category= None, id = None):
-        # if not isinstance(name,str):
-        #     raise TypeError("Name must be a string")
-        # if not 2 <= len(name) <= 16:
-        #     raise ValueError("Names must be between 2 and 16 characters, inclusive")
-        # if not isinstance(category,str):
-        #     raise TypeError("Category must be a string")
-        # if len(category) == 0:
-        #     raise ValueError("Name cannot be empty")
-
         self._id = id
         self._name = name
         self._category = category
