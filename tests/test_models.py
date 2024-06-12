@@ -69,11 +69,11 @@ class TestModels(unittest.TestCase):
         self.assertEqual(article.title, "Valid Title")
 
     def test_article_save(self):
-        Article.create_table()  # Ensure the table exists
+        Article.create_table()  
         article = Article("Test Title", "Test Content", 1, 1)
         article.save()
         self.assertIsNotNone(article.id)
-        Article.drop_table()  # Clean up by dropping the table
+        Article.drop_table()  
 
 if __name__ == "__main__":
     unittest.main()
